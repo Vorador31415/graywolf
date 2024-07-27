@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.5)
+cmake_minimum_required (VERSION 3.29)
 project (graywolf)
 
 enable_testing()
@@ -14,6 +14,7 @@ pkg_check_modules(GSL gsl)
 if (NOT GSL_FOUND)
   MESSAGE(FATAL_ERROR "The development files for the GNU Scientific Library (libgsl) are required to build graywolf.")
 endif()
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I/opt/homebrew/Cellar/gsl/2.8/include -L/opt/homebrew/Cellar/gsl/2.8/lib -lgsl")
 
 if (NOT X11_FOUND)
   MESSAGE(FATAL_ERROR "The development files for X11 (libx11-dev) are required to build graywolf.")
