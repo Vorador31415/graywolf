@@ -104,7 +104,7 @@ Function:
     NULL if nothing is in the tree or if no match to the key is found.
 */
 
-extern VOID Yrbtree_insert( P2(YTREEPTR tree, VOIDPTR data ) ) ;
+extern void Yrbtree_insert( P2(YTREEPTR tree, VOIDPTR data ) ) ;
 /* 
 Arguments:
     YTREEPTR tree ;

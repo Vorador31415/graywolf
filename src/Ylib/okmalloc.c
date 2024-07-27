@@ -57,7 +57,7 @@ CONTENTS:
 		INT   req_size;
 	    +++++++++ END HEAP MANAGEMENT ROUTINES ++++++++++++ 
 	      USER  CALLS FOR C RUN TIME LIBRARY 
-	    VOID Ysafe_free(ptr)
+	    void Ysafe_free(ptr)
 		char *ptr;
 	    VOID Ysafe_cfree(ptr)
 		char *ptr;
@@ -72,7 +72,7 @@ CONTENTS:
 	    INT YgetCurMemUse()
 	    INT YcheckMemObj(ptr)
 		char *ptr ;
-	    INT Yinit_memsize(memsize)
+	    void Yinit_memsize(memsize)
 		INT memsize ;
 	    INT YgetListSize(ptr, offsetPtr)
 		char *ptr ;     
@@ -588,7 +588,7 @@ VOID Ydump_mem()
 
 /*  SUBSTITION CALLS FOR C RUN TIME LIBRARY */
 
-VOID Ysafe_free(ptr MEM_DEBUG1 )
+void Ysafe_free(ptr MEM_DEBUG1 )
 VOIDPTR ptr;
 MEM_DEBUG2
 {
@@ -605,7 +605,7 @@ MEM_DEBUG2
     }
 }
 
-VOID Ysafe_cfree(ptr MEM_DEBUG1 )
+void Ysafe_cfree(ptr MEM_DEBUG1 )
 VOIDPTR ptr;
 MEM_DEBUG2
 {
@@ -704,7 +704,7 @@ MEM_DEBUG2
    return(ptr2);
 }
 
-VOID Yinit_memsize( memsize )
+void Yinit_memsize( memsize )
 INT memsize ;
 {
     regionSizeS = memsize ;
@@ -821,7 +821,7 @@ char *offsetPtr ;  /* pointer to "next" field within structure */
 
 /* debugMemory - turns on memory check debug messages and */
 /* memory to all 1's to detect access violations. */
-VOID YdebugMemory( flag )
+void YdebugMemory( flag )
 BOOL flag ;
 {
     debugFlagS = flag ;
@@ -833,7 +833,7 @@ BOOL flag ;
   *--------------------------------------------------------------
 */
 
-#else 
+#else
 
 /*
   *--------------------------------------------------------------
@@ -844,109 +844,97 @@ BOOL flag ;
 /* use standard calls to malloc, calloc, etc */
 
 char *Ysafe_malloc(size)
-INT size;
-{
-    char *p;
+INT size; {
+	char *p;
 
-    /*extern char *malloc() ;*/
+	/*extern char *malloc() ;*/
 
-    if ((p = malloc(size)) == (char *) 0) {
-        errno = heap_no_mem ;
-        kill(getpid(),SIGUSR1);
-    }
-    return p;
+	if ((p = malloc(size)) == (char *) 0) {
+		errno = heap_no_mem;
+		kill(getpid(),SIGUSR1);
+	}
+	return p;
 }
 
 
 char *Ysafe_realloc(obj, size)
 VOIDPTR obj;
-INT size;
-{
-    char *p;
+INT size; {
+	char *p;
 
-    /* extern char *realloc() ;*/
+	/* extern char *realloc() ;*/
 
-    if ((p = realloc(obj, size)) == (char *) 0) {
-        errno = heap_no_mem ;
-        kill(getpid(),SIGUSR1);
-    }
-    return p;
+	if ((p = realloc(obj, size)) == (char *) 0) {
+		errno = heap_no_mem;
+		kill(getpid(),SIGUSR1);
+	}
+	return p;
 }
 
 
 char *Ysafe_calloc(num, size)
-INT size, num;
-{
-    char *p;
+INT size, num; {
+	char *p;
 
-    /*extern char *calloc() ;*/
+	/*extern char *calloc() ;*/
 
-    if ((p = calloc(num,size)) == (char *) 0) {
-        errno = heap_no_mem ;
-        kill(getpid(),SIGUSR1);
-    }
-    return p;
+	if ((p = calloc(num, size)) == (char *) 0) {
+		errno = heap_no_mem;
+		kill(getpid(),SIGUSR1);
+	}
+	return p;
 }
+
 /* when not testing memory just call system free */
-VOID Ysafe_free(ptr)
-VOIDPTR ptr;
-{
-    free(ptr);
-    return;
+void Ysafe_free(ptr)
+VOIDPTR ptr; {
+	free(ptr);
+	return;
 }
 
-VOID Ysafe_cfree(ptr)
-VOIDPTR ptr;
-{
-    free(ptr);
-    return;
+void Ysafe_cfree(ptr)
+VOIDPTR ptr; {
+	free(ptr);
+	return;
 }
 
 /* ***********DUMMY ROUTINES TO RESOLVE GLOBALS **************** */
 /* see above for normal use */
-INT YgetCurMemUse()
-{
-    return(0) ;
+INT YgetCurMemUse() {
+	return (0);
 }
 
-INT YgetMaxMemUse()
-{
-    return(0) ;
+INT YgetMaxMemUse() {
+	return (0);
 }
 
 INT YcheckMemObj(ptr)
-char *ptr ;
-{
-   return(0) ;
+char *ptr ; {
+	return (0);
 }
 
 INT YgetListSize(ptr, offsetPtr)
-char *ptr ;     /* pointer to beginning of list structure */
-char *offsetPtr ;  /* pointer to "next" field within structure */
+char *ptr ; /* pointer to beginning of list structure */
+char *offsetPtr ; /* pointer to "next" field within structure */
 {
-    return(0) ;
+	return (0);
 }
 
-VOID YdebugMemory( flag )
-INT flag ;
-{
-    return ;
+void YdebugMemory(INT flag) {
+	return;
 }
 
-INT YcheckDebug( where )
-VOIDPTR where ; 
-{
-    return ( INT_MAX ) ;
+INT YcheckDebug(where)
+VOIDPTR where ; {
+	return (INT_MAX);
 } /* end checkDebug */
 
-VOID Yinit_memsize( memsize )
-INT memsize ;
-{
-    return ;
+void Yinit_memsize(memsize)
+INT memsize ; {
+	return;
 } /* end Yinit_memsize */
 
-VOID Ydump_mem()
-{
+VOID Ydump_mem() {
 } /* end Ydump_mem() */
 /*
   *--------------------------------------------------------------
@@ -956,92 +944,87 @@ VOID Ydump_mem()
 #endif
 
 /* print memory error in the same style as perror and psignal */
-VOID Ypmemerror( s )
-char *s ;
-{
-    /* first print user message if available */
-    if( s ){
-	fprintf( stderr, "%s:", s ) ;
-    }
-    switch(errno){
-	case heap_ok:
-	   fprintf(stderr,
-	   "Memory ok - Problem in memory management logic.\n" ) ;
-	   break; 
-	case heap_bad_block:
-	   fprintf(stderr,
-	   "Memory block was found to be corrupted.\n" ) ;
-	   break; 
-	case heap_no_mem:
-	   fprintf(stderr,
-	   "No memory available to allocate.\n" ) ;
-	   break; 
-	default:
-	   fprintf(stderr,
-	   "Error = %0x Unrecognized error code.\n",errno ) ;
-    }
+VOID Ypmemerror(s)
+char *s ; {
+	/* first print user message if available */
+	if (s) {
+		fprintf(stderr, "%s:", s);
+	}
+	switch (errno) {
+		case heap_ok:
+			fprintf(stderr,
+			        "Memory ok - Problem in memory management logic.\n");
+			break;
+		case heap_bad_block:
+			fprintf(stderr,
+			        "Memory block was found to be corrupted.\n");
+			break;
+		case heap_no_mem:
+			fprintf(stderr,
+			        "No memory available to allocate.\n");
+			break;
+		default:
+			fprintf(stderr,
+			        "Error = %0x Unrecognized error code.\n",errno);
+	}
 } /* end Ypmemerror */
 
 /* *******  memory convenience functions  ******* */
 /* ALLOCATE an array [lo..hi] of the given size not initialized */
-char *Yvector_alloc( lo, hi, size MEM_DEBUG1 )
+char *Yvector_alloc(lo, hi, size MEM_DEBUG1 )
 INT size, lo, hi ;
 MEM_DEBUG2
 {
-    char *array_return ;
+	char *array_return;
 
-    array_return = (char *) Ysafe_malloc((unsigned) (hi-lo+1)*size MEM_DEBUG1 ) ;
-    if( array_return ){
-	return( array_return - size * lo ) ;
-    }
-    return( NIL(char *) ) ;
-
+	array_return = (char *) Ysafe_malloc((unsigned) (hi - lo + 1) * size MEM_DEBUG1 );
+	if (array_return) {
+		return (array_return - size * lo);
+	}
+	return (NIL(char *));
 } /* end Yvector_alloc */
 
 /* ALLOCATE an array [lo..hi] of the given size initialized to zero */
-char *Yvector_calloc( lo, hi, size MEM_DEBUG1 )
+char *Yvector_calloc(lo, hi, size MEM_DEBUG1 )
 INT size, lo, hi ;
 MEM_DEBUG2
 {
-    char *array_return ;
+	char *array_return;
 
-    array_return = (char *) Ysafe_calloc((unsigned) (hi-lo+1),size MEM_DEBUG1 ) ;
-    if( array_return ){
-	return( array_return - size * lo ) ;
-    }
-    return( NIL(char *) ) ;
-
+	array_return = (char *) Ysafe_calloc((unsigned) (hi - lo + 1), size MEM_DEBUG1 );
+	if (array_return) {
+		return (array_return - size * lo);
+	}
+	return (NIL(char *));
 } /* end Yvector_calloc */
 
 /* REALLOCATE an array [lo..hi] of the given size no initialization */
-char *Yvector_realloc( array_orig, lo, hi, size MEM_DEBUG1 )
+char *Yvector_realloc(array_orig, lo, hi, size MEM_DEBUG1 )
 VOIDPTR array_orig ;
 INT size, lo, hi ;
 MEM_DEBUG2
 {
-    char *adj_array ;          /* put back the offset */
-    char *array_return ;       /* the new offset */
+	char *adj_array; /* put back the offset */
+	char *array_return; /* the new offset */
 
-    adj_array = ((char *) array_orig) + lo * size ;
-    array_return = (char *) 
-	Ysafe_realloc( adj_array, (unsigned) (hi-lo+1)*size MEM_DEBUG1 ) ;
-    if( array_return ){
-	return( array_return - size * lo ) ;
-    }
-    return( NIL(char *) ) ;
-
+	adj_array = ((char *) array_orig) + lo * size;
+	array_return = (char *)
+			Ysafe_realloc(adj_array, (unsigned) (hi - lo + 1) * size MEM_DEBUG1 );
+	if (array_return) {
+		return (array_return - size * lo);
+	}
+	return (NIL(char *));
 } /* end Yvector_realloc */
 
-VOID Yvector_free( array, lo, size MEM_DEBUG1 )
+VOID Yvector_free(array, lo, size MEM_DEBUG1 )
 VOIDPTR array ;
 INT lo, size ;
-MEM_DEBUG2
-{
-    Ysafe_free( ((char *)array) + lo * size MEM_DEBUG1 ) ;
+MEM_DEBUG2{
+	Ysafe_free(((char *) array) + lo * size MEM_DEBUG1 );
 } /* end Yvector_free */
 
 /* ************************* TEST ROUTINES ******************************** */
-#ifdef TEST 
+#ifdef TEST
 
 typedef struct {
     INT bogus_dude ;

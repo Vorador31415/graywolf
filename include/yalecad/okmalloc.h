@@ -23,8 +23,8 @@ REVISIONS:
 #define YVECTOR_REALLOC(ar,lo,hi,els) (els *) Yvector_realloc( ar,lo,hi,sizeof(els))
 
 /* memory manager definitions - safety net between memory manager */
-extern VOID Ysafe_free( P1(void *ptr) ) ;
-extern VOID Ysafe_cfree( P1(void *ptr) ) ;
+extern void Ysafe_free( P1(void *ptr) ) ;
+extern void Ysafe_cfree( P1(void *ptr) ) ;
 extern char *Ysafe_malloc( P1(INT bytes) ) ;
 extern char *Ysafe_calloc( P2(INT num_entries, INT bytes) ) ;
 extern char *Ysafe_realloc( P2(void *ptr, INT bytes) ) ;
@@ -55,8 +55,8 @@ extern VOID Yvector_free( P3( VOIDPTR array, INT lo, INT size ) ) ;
     Yvector_free( ar,lo,sizeof(* ar),__FILE__,__LINE__)
 
 /* memory manager definitions - safety net between memory manager */
-extern VOID Ysafe_free( P3(void *ptr,char *file,INT line) ) ;
-extern VOID Ysafe_cfree( P3(void *ptr,char *file,INT line) ) ;
+extern void Ysafe_free( P3(void *ptr,char *file,INT line) ) ;
+extern void Ysafe_cfree( P3(void *ptr,char *file,INT line) ) ;
 extern char *Ysafe_malloc( P3(INT bytes,char *file,INT line) ) ;
 extern char *Ysafe_calloc( P4(INT num_entries, INT bytes,char *file,INT line) ) ;
 extern char *Ysafe_realloc( P4(void *ptr, INT bytes,char *file,INT line) ) ;
@@ -71,9 +71,9 @@ extern VOID Yvector_free( P5( VOIDPTR array, INT lo, INT size,char *f,INT l ) ) 
 extern INT YgetCurMemUse( P1(void) ) ;
 extern INT YgetMaxMemUse( P1(void) ) ;
 extern INT YcheckMemObj( P1(char *ptr) ) ;
-extern VOID YdebugMemory( P1(INT flag ) ) ;
+extern void YdebugMemory( P1(INT flag ) ) ;
 extern INT YcheckDebug( P1(VOIDPTR where ) ) ;
-extern VOID Yinit_memsize( P1(INT memsize) ) ;
+extern void Yinit_memsize( P1(INT memsize) ) ;
 extern VOID Ydump_mem( P1(void) ) ;
 extern VOID Ypmemerror( P1(char *message ) ) ;
 

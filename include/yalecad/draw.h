@@ -36,11 +36,11 @@ typedef struct {
 } TWMENUBOX, *TWMENUPTR ;
 
 /* the switchable routines */
-extern VOID (*_TWdrawRect)(P7( INT ref_num, INT x1, INT y1, INT x2, INT y2, INT color,
+extern void (*_TWdrawRect)(P7( INT ref_num, INT x1, INT y1, INT x2, INT y2, INT color,
 		    char *label )) ;
-extern VOID (*_TWdrawLine)(P7( INT ref_num, INT x1, INT y1, INT x2, INT y2, INT color,
+extern void (*_TWdrawLine)(P7( INT ref_num, INT x1, INT y1, INT x2, INT y2, INT color,
 		    char *label )) ;
-extern VOID (*_TWdrawArb)(P3( INT ref_num, INT color, char *label )) ;
+extern void (*_TWdrawArb)(P3( INT ref_num, INT color, char *label )) ;
 
 /* make calls easier for the user so he doesn't know that the */
 /* routines are switchable according to mode */

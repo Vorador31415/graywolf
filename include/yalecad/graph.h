@@ -393,7 +393,7 @@ extern INT Ygraph_edgeWeights2Size( P1 (YGRAPHPTR graph) );
   Optionally, the user can provide a targetNode beyond
   which the search is terminated.
   ------------------------------------------------------------*/
-extern VOID Ygraph_bfs(P3(YGRAPHPTR graph,YNODEPTR source,YNODEPTR target));
+extern void Ygraph_bfs(P3(YGRAPHPTR graph,YNODEPTR source,YNODEPTR target));
 
 /*-----------------------------------------------------------
   Ygraph_path: returns a deck containing a path
@@ -497,7 +497,7 @@ extern YGRAPHPTR Ygraph_steiner(P2(YGRAPHPTR graph,int maxImproves));
   The original graph must have its required
   nodes properly set.
   ----------------------------------------*/
-VOID Ygraph_steinerImprove(P3(YGRAPHPTR graph,YGRAPHPTR steinerGraph,
+void Ygraph_steinerImprove(P3(YGRAPHPTR graph,YGRAPHPTR steinerGraph,
      int maxIterations));
 
 /*---------------------------------------

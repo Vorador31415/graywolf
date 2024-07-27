@@ -96,1114 +96,1069 @@ REVISIONS:  Apr 19, 1990 - Added Yrbtree_dump()
 #define RED          1
 
 typedef struct bin_tree {
-    struct bin_tree *left ;
-    struct bin_tree *right ;
-    struct bin_tree *parent ;
-    VOIDPTR data ;
-    BOOL color ;
-} BINTREE, *BINTREEPTR ;
+	struct bin_tree *left;
+	struct bin_tree *right;
+	struct bin_tree *parent;
+	VOIDPTR data;
+	BOOL color;
+} BINTREE, *BINTREEPTR;
 
 typedef struct tree {
-    BINTREEPTR root ;                 /* the root of the tree */
-    INT        (*compare_func)() ;    /* how to compare two keys */
-    INT        size;                  /* current size of tree */
-    BINTREEPTR intervalPtr;           /* current position in interval search */
-    BINTREEPTR searchPtr;             /* current position in search */
-    BINTREEPTR enumeratePtr;          /* current position in enumeration */
-    YDECKPTR   enumerateDeck; 	      /* enumerate pointer deck */
-    YDECKPTR   intervalDeck;          /* interval pointer deck */
-} YTREEBOX, *YTREEPTR ;
+	BINTREEPTR root; /* the root of the tree */
+	INT (*compare_func)(); /* how to compare two keys */
+	INT size; /* current size of tree */
+	BINTREEPTR intervalPtr; /* current position in interval search */
+	BINTREEPTR searchPtr; /* current position in search */
+	BINTREEPTR enumeratePtr; /* current position in enumeration */
+	YDECKPTR enumerateDeck; /* enumerate pointer deck */
+	YDECKPTR intervalDeck; /* interval pointer deck */
+} YTREEBOX, *YTREEPTR;
 
 
 #include <yalecad/rbtree.h>
 
 /* ***************** STATIC VARIABLE DEFINITIONS ******************* */
-static INT          treeSizeS ;        /* the size of a tree */
-static BINTREE      sentinelS ;        /* build a sentinel */
-static BINTREEPTR   nilS ;             /* pointer to sentinel */
-static BINTREE      recalc_sentinelS ; /* build a recalculate flag */
-static BINTREEPTR   recalcS ;          /* pointer to recalc flag */
+static INT treeSizeS; /* the size of a tree */
+static BINTREE sentinelS; /* build a sentinel */
+static BINTREEPTR nilS; /* pointer to sentinel */
+static BINTREE recalc_sentinelS; /* build a recalculate flag */
+static BINTREEPTR recalcS; /* pointer to recalc flag */
 
 /* ***************** STATIC FUNCTION DEFINITIONS ******************* */
-static BINTREEPTR tree_search( P2(YTREEPTR tree, char *key) ) ;
-static BINTREEPTR tree_suc( P1(BINTREEPTR ptr) ) ;
-static BINTREEPTR tree_pred( P1(BINTREEPTR ptr) ) ;
-static void left_rotate( P2(YTREEPTR tree, BINTREEPTR x) ) ;
-static void right_rotate( P2(YTREEPTR tree, BINTREEPTR x) ) ;
-static void tree_free( P1(BINTREEPTR ptr) ) ;
-static void free_tree_and_data( P2(BINTREEPTR ptr, VOID (*userDelete)() ) ) ;
-static void tree_delete( P3(YTREEPTR tree, BINTREEPTR z, VOID (*userDelete)() ) ) ;
-static void tree_dump( P4(YTREEPTR tree,BINTREEPTR ptr,
-    		    VOID (*print_key)(),INT printTab) ) ;
+static BINTREEPTR tree_search(P2(YTREEPTR tree, char *key) );
 
-YTREEPTR Yrbtree_init( compare_func )
-INT (*compare_func)() ;  /* user specifies key function */
+static BINTREEPTR tree_suc(P1(BINTREEPTR ptr) );
+
+static BINTREEPTR tree_pred(P1(BINTREEPTR ptr) );
+
+static void left_rotate(P2(YTREEPTR tree, BINTREEPTR x) );
+
+static void right_rotate(P2(YTREEPTR tree, BINTREEPTR x) );
+
+static void tree_free(P1(BINTREEPTR ptr) );
+
+static void free_tree_and_data(P2(BINTREEPTR ptr, VOID (*userDelete)()) );
+
+static void tree_delete(P3(YTREEPTR tree, BINTREEPTR z, VOID (*userDelete)()) );
+
+static void tree_dump(P4(YTREEPTR tree, BINTREEPTR ptr,
+                         VOID (*print_key)(), INT printTab) );
+
+YTREEPTR Yrbtree_init(compare_func)
+INT (*compare_func)() ; /* user specifies key function */
 {
+	YTREEPTR tree; /* the current tree being built */
 
-    YTREEPTR tree ;      /* the current tree being built */
+	/* initialize nilS */
+	nilS = &sentinelS;
+	nilS->parent = NIL(BINTREEPTR);
+	nilS->right = NIL(BINTREEPTR);
+	nilS->left = NIL(BINTREEPTR);
+	nilS->data = NIL(VOIDPTR);
+	nilS->color = BLACK;
+	recalcS = &recalc_sentinelS;
 
-    /* initialize nilS */
-    nilS = &sentinelS ;
-    nilS->parent = NIL(BINTREEPTR) ;
-    nilS->right = NIL(BINTREEPTR) ;
-    nilS->left = NIL(BINTREEPTR) ;
-    nilS->data = NIL(VOIDPTR) ;
-    nilS->color = BLACK ;
-    recalcS = &recalc_sentinelS ;
-
-    tree = (YTREEPTR) YMALLOC( 1, YTREEBOX ) ;
-    tree->root = nilS ;
-    tree->compare_func = compare_func ;
-    tree->enumerateDeck = NIL(YDECKPTR); 	     
-    tree->intervalDeck = NIL(YDECKPTR) ; 
-    tree->intervalPtr = NIL(BINTREEPTR) ;
-    tree->searchPtr = NIL(BINTREEPTR) ;
-    tree->enumeratePtr = NIL(BINTREEPTR) ;
-    tree->size = 0;
-    return( tree ) ;
-
+	tree = (YTREEPTR) YMALLOC(1, YTREEBOX);
+	tree->root = nilS;
+	tree->compare_func = compare_func;
+	tree->enumerateDeck = NIL(YDECKPTR);
+	tree->intervalDeck = NIL(YDECKPTR);
+	tree->intervalPtr = NIL(BINTREEPTR);
+	tree->searchPtr = NIL(BINTREEPTR);
+	tree->enumeratePtr = NIL(BINTREEPTR);
+	tree->size = 0;
+	return (tree);
 } /* Yrbtree_init */
 
 /* used internally in this routine */
-static BINTREEPTR tree_search( tree, key )
+static BINTREEPTR tree_search(tree, key)
 YTREEPTR tree ;
-char *key ;
-{
-    INT (*comp_func)() ;      /* current compare function */
-    BINTREEPTR ptr ;            /* current node in the tree */
-    INT k ;                   /* test condition [-1,0,1] */
+char *key ; {
+	INT (*comp_func)(); /* current compare function */
+	BINTREEPTR ptr; /* current node in the tree */
+	INT k; /* test condition [-1,0,1] */
 
-    ptr = tree->root ;
-    comp_func = tree->compare_func ;
+	ptr = tree->root;
+	comp_func = tree->compare_func;
 
-    while( ptr != nilS && (k = comp_f( ptr->data, key )) ){
-	if( k > 0 ){
-	    ptr = ptr->left ;
-	} else {
-	    ptr = ptr->right ;
+	while (ptr != nilS && (k = comp_f(ptr->data, key))) {
+		if (k > 0) {
+			ptr = ptr->left;
+		} else {
+			ptr = ptr->right;
+		}
 	}
-    }
-    return( ptr ) ;
-    
+	return (ptr);
 } /* end tree_search */
 
 
 /* the global version */
-VOIDPTR Yrbtree_search( tree, key )
+VOIDPTR Yrbtree_search(tree, key)
 YTREEPTR tree ;
-VOIDPTR key ;
-{
-    INT (*comp_func)() ;      /* current compare function */
-    BINTREEPTR ptr ;          /* current node in the tree */
-    INT k ;
+VOIDPTR key ; {
+	INT (*comp_func)(); /* current compare function */
+	BINTREEPTR ptr; /* current node in the tree */
+	INT k;
 
-    ptr = tree->root ;
-    comp_func = tree->compare_func ;
+	ptr = tree->root;
+	comp_func = tree->compare_func;
 
-    while( ptr != nilS && (k = comp_f( ptr->data, key )) ){
-	if( k > 0 ){
-	    ptr = ptr->left ;
-	} else {
-	    ptr = ptr->right ;
+	while (ptr != nilS && (k = comp_f(ptr->data, key))) {
+		if (k > 0) {
+			ptr = ptr->left;
+		} else {
+			ptr = ptr->right;
+		}
 	}
-    }
-    tree->searchPtr = ptr;	/* save new current position */
-    if( ptr != nilS ){
-	return( ptr->data ) ;
-    }
+	tree->searchPtr = ptr; /* save new current position */
+	if (ptr != nilS) {
+		return (ptr->data);
+	}
 
-    return( NIL(VOIDPTR) ) ;
-    
+	return (NIL(VOIDPTR));
 } /* end Yrbtree_search */
 
-VOIDPTR Yrbtree_search_closest( tree, key, func )
+VOIDPTR Yrbtree_search_closest(tree, key, func)
 YTREEPTR tree ;
 VOIDPTR key ;
-INT func ;
-{
-    INT (*comp_func)() ;      /* current compare function */
-    BINTREEPTR ptr ;          /* current node in the tree */
-    BINTREEPTR closest_ptr ;  /* current closest match in the tree */
-    BINTREEPTR suc, pred ;    /* successor and predecessor for closest_ptr */
-    INT dist1, dist2 ;	      /* distance using predecessor functions */
-    INT k ;
+INT func ; {
+	INT (*comp_func)(); /* current compare function */
+	BINTREEPTR ptr; /* current node in the tree */
+	BINTREEPTR closest_ptr; /* current closest match in the tree */
+	BINTREEPTR suc, pred; /* successor and predecessor for closest_ptr */
+	INT dist1, dist2; /* distance using predecessor functions */
+	INT k;
 
-    ptr = tree->root ;
-    comp_func = tree->compare_func ;
-    closest_ptr = NIL(BINTREEPTR) ;
+	ptr = tree->root;
+	comp_func = tree->compare_func;
+	closest_ptr = NIL(BINTREEPTR);
 
-    while( ptr != nilS && (k = comp_f( ptr->data, key )) ){
-	closest_ptr = ptr ; /* save the closest match so far */
-	if( k > 0 ){
-	    ptr = ptr->left ;
-	} else {
-	    ptr = ptr->right ;
+	while (ptr != nilS && (k = comp_f(ptr->data, key))) {
+		closest_ptr = ptr; /* save the closest match so far */
+		if (k > 0) {
+			ptr = ptr->left;
+		} else {
+			ptr = ptr->right;
+		}
 	}
-
-    }
-    if( ptr == nilS ){
-	/* in the case of no exact match return closest */
-	if( closest_ptr ){
-	    switch( func ){
-	    case SEARCH_CLOSEST_NOP:
-		break ;
-	    case SEARCH_CLOSEST_BELOW:
-		dist1 = comp_f( closest_ptr->data, key ) ;
-		if( dist1 > 0 ){
-		    pred = tree_pred( closest_ptr ) ;
-		    if( pred != nilS ){
-			/* take predecessor */
-			closest_ptr = pred ;
-		    }
+	if (ptr == nilS) {
+		/* in the case of no exact match return closest */
+		if (closest_ptr) {
+			switch (func) {
+				case SEARCH_CLOSEST_NOP:
+					break ;
+				case SEARCH_CLOSEST_BELOW:
+					dist1 = comp_f(closest_ptr->data, key);
+					if (dist1 > 0) {
+						pred = tree_pred(closest_ptr);
+						if (pred != nilS) {
+							/* take predecessor */
+							closest_ptr = pred;
+						}
+					}
+					break ;
+				case SEARCH_CLOSEST_ABOVE:
+					dist1 = comp_f(closest_ptr->data, key);
+					if (dist1 < 0) {
+						suc = tree_suc(closest_ptr);
+						if (suc != nilS) {
+							/* take successor */
+							closest_ptr = suc;
+						}
+					}
+					break ;
+				case SEARCH_CLOSEST:
+					/* ----------------------------------------------------------
+					*  See which one is closer - current pointer, predecessor
+					*  or sucessor.
+					---------------------------------------------------------- */
+					dist1 = comp_f(closest_ptr->data, key);
+					pred = tree_pred(closest_ptr);
+					if (pred != nilS) {
+						dist2 = comp_f(pred->data, key);
+						if (ABS(dist2) < ABS(dist1)) {
+							/* predecessor is closer */
+							closest_ptr = pred;
+							dist1 = dist2;
+						}
+					}
+					suc = tree_suc(closest_ptr);
+					if (suc != nilS) {
+						dist2 = comp_f(suc->data, key);
+						if (ABS(dist2) < ABS(dist1)) {
+							/* take sucessor only if it is better */
+							closest_ptr = suc;
+						}
+					}
+					break ;
+			} /* end switch( func )...  */
+			ptr = closest_ptr;
+		} else {
+			/* there is nothing in the tree */
+			return (NIL(VOIDPTR));
 		}
-		break ;
-	    case SEARCH_CLOSEST_ABOVE:
-		dist1 = comp_f( closest_ptr->data, key ) ;
-		if( dist1 < 0 ){
-		    suc = tree_suc( closest_ptr ) ;
-		    if( suc != nilS ){
-			/* take successor */
-			closest_ptr = suc ;
-		    }
-		}
-		break ;
-	    case SEARCH_CLOSEST:
-		/* ----------------------------------------------------------
-		*  See which one is closer - current pointer, predecessor
-		*  or sucessor.
-		---------------------------------------------------------- */
-		dist1 = comp_f( closest_ptr->data, key ) ;
-		pred = tree_pred( closest_ptr ) ;
-		if( pred != nilS ){
-		    dist2 = comp_f( pred->data, key ) ;
-		    if( ABS(dist2) < ABS(dist1) ){
-			/* predecessor is closer */
-			closest_ptr = pred ;
-			dist1 = dist2 ;
-		    } 
-		}
-		suc = tree_suc( closest_ptr ) ;
-		if( suc != nilS ){
-		    dist2 = comp_f( suc->data, key ) ;
-		    if( ABS(dist2) < ABS(dist1) ){
-			/* take sucessor only if it is better */
-			closest_ptr = suc ;
-		    } 
-		}
-		break ;
-	    } /* end switch( func )...  */
-	    ptr = closest_ptr ;
-
-	} else {
-	    /* there is nothing in the tree */
-	    return( NIL(VOIDPTR) ) ;
 	}
-    }
-    tree->searchPtr = ptr;	/* save new current position */
-    return( ptr->data ) ;
-    
+	tree->searchPtr = ptr; /* save new current position */
+	return (ptr->data);
 } /* end Yrbtree_search_closest */
 
 
-VOIDPTR Yrbtree_min( tree )
-YTREEPTR tree ;
-{
-    BINTREEPTR ptr ;          /* current node in the tree */
-    
-    if ( tree->root == nilS ) {
-      return( NIL(VOIDPTR) );    
-    }
+VOIDPTR Yrbtree_min(tree)
+YTREEPTR tree ; {
+	BINTREEPTR ptr; /* current node in the tree */
 
-    for( ptr = tree->root; ptr->left != nilS ; ptr = ptr->left ) ;
-    tree->searchPtr = ptr;	/* save new current position */
-    if( ptr != nilS ){
-	return( ptr->data ) ;
-    }
-    return( NIL(VOIDPTR) ) ;
+	if (tree->root == nilS) {
+		return (NIL(VOIDPTR));
+	}
+
+	for (ptr = tree->root; ptr->left != nilS; ptr = ptr->left);
+	tree->searchPtr = ptr; /* save new current position */
+	if (ptr != nilS) {
+		return (ptr->data);
+	}
+	return (NIL(VOIDPTR));
 } /* end Yrbtree_min */
 
-VOIDPTR Yrbtree_max( tree )
-YTREEPTR tree ;
-{
-    BINTREEPTR ptr ;          /* current node in the tree */
+VOIDPTR Yrbtree_max(tree)
+YTREEPTR tree ; {
+	BINTREEPTR ptr; /* current node in the tree */
 
-    if ( tree->root == nilS ) {
-      return( NIL(VOIDPTR) );    
-    }
+	if (tree->root == nilS) {
+		return (NIL(VOIDPTR));
+	}
 
-    for( ptr = tree->root; ptr->right != nilS ; ptr = ptr->right ) ;
-    tree->searchPtr = ptr;	/* save new current position */
-    if( ptr != nilS ){
-	return( ptr->data ) ;
-    }
-    return( NIL(VOIDPTR) ) ;
+	for (ptr = tree->root; ptr->right != nilS; ptr = ptr->right);
+	tree->searchPtr = ptr; /* save new current position */
+	if (ptr != nilS) {
+		return (ptr->data);
+	}
+	return (NIL(VOIDPTR));
 } /* end Yrbtree_min */
 
-static BINTREEPTR tree_suc( ptr )
-BINTREEPTR ptr ;
-{
-    BINTREEPTR y ;          /* a temporary pointer */
+static BINTREEPTR tree_suc(ptr)
+BINTREEPTR ptr ; {
+	BINTREEPTR y; /* a temporary pointer */
 
-    if( ptr == nilS ){
-	return( nilS ) ;
-    }
-    if( ptr->right != nilS ){
-	for( ptr = ptr->right; ptr->left != nilS ; ptr = ptr->left ) ;
-	return( ptr ) ;
-    }
-    for( y = ptr->parent; y != nilS && ptr == y->right; y = y->parent ){
-	ptr = y ;
-    }
-    return( y ) ;
+	if (ptr == nilS) {
+		return (nilS);
+	}
+	if (ptr->right != nilS) {
+		for (ptr = ptr->right; ptr->left != nilS; ptr = ptr->left);
+		return (ptr);
+	}
+	for (y = ptr->parent; y != nilS && ptr == y->right; y = y->parent) {
+		ptr = y;
+	}
+	return (y);
 } /* end tree_suc */
 
-static BINTREEPTR tree_pred( ptr )
-BINTREEPTR ptr ;
-{
-    BINTREEPTR y ;          /* a temporary pointer */
+static BINTREEPTR tree_pred(ptr)
+BINTREEPTR ptr ; {
+	BINTREEPTR y; /* a temporary pointer */
 
-    if( ptr == nilS ){
-	return( nilS ) ;
-    }
-    if( ptr->left != nilS ){
-	/* find the rightmost of the left pointer */
-	for( ptr = ptr->left; ptr->right != nilS ; ptr = ptr->right ) ;
-	return( ptr ) ;
-    }
-    /* otherwise we have to back up to the parent */
-    for( y = ptr->parent; y != nilS && ptr == y->left; y = y->parent ){
-	ptr = y ;
-    }
-    return( y ) ;
+	if (ptr == nilS) {
+		return (nilS);
+	}
+	if (ptr->left != nilS) {
+		/* find the rightmost of the left pointer */
+		for (ptr = ptr->left; ptr->right != nilS; ptr = ptr->right);
+		return (ptr);
+	}
+	/* otherwise we have to back up to the parent */
+	for (y = ptr->parent; y != nilS && ptr == y->left; y = y->parent) {
+		ptr = y;
+	}
+	return (y);
 } /* end tree_pred */
 
 
-VOIDPTR Yrbtree_suc( tree, data )
+VOIDPTR Yrbtree_suc(tree, data)
 YTREEPTR tree ;
-VOIDPTR data ;
-{
-    BINTREEPTR ptr ;          /* a temporary pointer */
-    BINTREEPTR suc ;          /* a temporary pointer */
+VOIDPTR data ; {
+	BINTREEPTR ptr; /* a temporary pointer */
+	BINTREEPTR suc; /* a temporary pointer */
 
-    ptr = tree_search( tree, data ) ;
-    suc = tree_suc( ptr ) ;
-    if( suc != nilS ){
-	return( suc->data ) ;
-    }
-    return( NIL(VOIDPTR) ) ;
+	ptr = tree_search(tree, data);
+	suc = tree_suc(ptr);
+	if (suc != nilS) {
+		return (suc->data);
+	}
+	return (NIL(VOIDPTR));
 } /* end Yrbtree_suc */
 
-VOIDPTR Yrbtree_search_suc( tree )
-YTREEPTR tree ;
-{
-    BINTREEPTR ptr ;		/* current node in the tree */
+VOIDPTR Yrbtree_search_suc(tree)
+YTREEPTR tree ; {
+	BINTREEPTR ptr; /* current node in the tree */
 
-    /* find successor to current position in tree set by Yrbtree_search */
-    ptr = tree->searchPtr;	/* get old current position */
-    ptr = tree_suc( ptr ) ;
-    tree->searchPtr = ptr;	/* save new current position */
+	/* find successor to current position in tree set by Yrbtree_search */
+	ptr = tree->searchPtr; /* get old current position */
+	ptr = tree_suc(ptr);
+	tree->searchPtr = ptr; /* save new current position */
 
-    if( ptr != nilS ){
-	return( ptr->data ) ;
-    }
-    return( NIL(VOIDPTR) ) ;
-    
+	if (ptr != nilS) {
+		return (ptr->data);
+	}
+	return (NIL(VOIDPTR));
 } /* end Yrbtree_search_suc */
 
-VOIDPTR Yrbtree_search_pred( tree )
-YTREEPTR tree ;
-{
-    BINTREEPTR ptr ;		/* current node in the tree */
+VOIDPTR Yrbtree_search_pred(tree)
+YTREEPTR tree ; {
+	BINTREEPTR ptr; /* current node in the tree */
 
-    /* 
-	Find predecessor to current position in tree set by 
-	Yrbtree_search or Yrbtree_interval 
-    */
-    ptr = tree->searchPtr;	/* get old current position */
-    ptr = tree_pred( ptr ) ;
-    tree->searchPtr = ptr;	/* save new current position */
+	/*
+	Find predecessor to current position in tree set by
+	Yrbtree_search or Yrbtree_interval
+	*/
+	ptr = tree->searchPtr; /* get old current position */
+	ptr = tree_pred(ptr);
+	tree->searchPtr = ptr; /* save new current position */
 
-    if( ptr != nilS ){
-	return( ptr->data ) ;
-    }
-    return( NIL(VOIDPTR) ) ;
-    
+	if (ptr != nilS) {
+		return (ptr->data);
+	}
+	return (NIL(VOIDPTR));
 } /* end Yrbtree_search_pred */
 
-static void left_rotate( tree, x )
+static void left_rotate(tree, x)
 YTREEPTR tree ;
-BINTREEPTR x ;
-{
-    BINTREEPTR y ;          /* a temporary pointer */
+BINTREEPTR x ; {
+	BINTREEPTR y; /* a temporary pointer */
 
-    y = x->right ;             /* set y */
-    x->right = y->left ;       /* Turn y's left subtreee in x's right */
-    if( y->left != nilS ){
-	y->left->parent = x ;
-    }
-    y->parent = x->parent ;   /* link x's parent to y */
-    if( x->parent == nilS ){
-	tree->root = y ;
-    } else if( x == x->parent->left ){
-	x->parent->left = y ;
-    } else {
-	x->parent->right = y ;
-    }
-    y->left = x ;             /* put x on y's left */
-    x->parent = y ;       
+	y = x->right; /* set y */
+	x->right = y->left; /* Turn y's left subtreee in x's right */
+	if (y->left != nilS) {
+		y->left->parent = x;
+	}
+	y->parent = x->parent; /* link x's parent to y */
+	if (x->parent == nilS) {
+		tree->root = y;
+	} else if (x == x->parent->left) {
+		x->parent->left = y;
+	} else {
+		x->parent->right = y;
+	}
+	y->left = x; /* put x on y's left */
+	x->parent = y;
 } /* left_rotate */
 
-static void right_rotate( tree, x )
+static void right_rotate(tree, x)
 YTREEPTR tree ;
-BINTREEPTR x ;
-{
-    BINTREEPTR y ;          /* a temporary pointer */
+BINTREEPTR x ; {
+	BINTREEPTR y; /* a temporary pointer */
 
-    y = x->left ;             /* set y */
-    x->left = y->right ;      /* Turn y's right subtreee in x's left */
-    if( y->right != nilS ){
-	y->right->parent = x ;
-    }
-    y->parent = x->parent ;   /* link x's parent to y */
-    if( x->parent == nilS ){
-	tree->root = y ;
-    } else if( x == x->parent->right ){
-	x->parent->right = y ;
-    } else {
-	x->parent->left = y ;
-    }
-    y->right = x ;            /* put x on y's right */
-    x->parent = y ;       
+	y = x->left; /* set y */
+	x->left = y->right; /* Turn y's right subtreee in x's left */
+	if (y->right != nilS) {
+		y->right->parent = x;
+	}
+	y->parent = x->parent; /* link x's parent to y */
+	if (x->parent == nilS) {
+		tree->root = y;
+	} else if (x == x->parent->right) {
+		x->parent->right = y;
+	} else {
+		x->parent->left = y;
+	}
+	y->right = x; /* put x on y's right */
+	x->parent = y;
 } /* right_rotate */
 
 /* -----------------------------------------------------------------
 * Delete a node in the tree by using actual pointer.  Also frees
 * user data if necessary.
 ----------------------------------------------------------------- */
-static void tree_delete( tree, z, userDelete )
+static void tree_delete(tree, z, userDelete)
 YTREEPTR tree ;
 BINTREEPTR z ;
-VOID (*userDelete)();
-{
-    BINTREEPTR w ;            /* a temporary pointer */
-    BINTREEPTR x ;            /* a temporary pointer */
-    BINTREEPTR y ;            /* a temporary pointer */
+VOID (*userDelete)(); {
+	BINTREEPTR w; /* a temporary pointer */
+	BINTREEPTR x; /* a temporary pointer */
+	BINTREEPTR y; /* a temporary pointer */
 
-    /* we must delete the user data first so to avoid copy problem later */
-    if (userDelete) {
-      (*userDelete)( z->data ) ;
-    }
-    /* now begin deletion process */
-    /* determine which node to splice out */
-    if( z->left == nilS || z->right == nilS ){
-	y = z ;
-    } else {
-	y = tree_suc( z ) ;
-    }
-    /* let x be the non-nil child of y or nil if y has no children */
-    if( y->left != nilS ){
-	x = y->left ;
-    } else {
-	x = y->right ;
-    }
-    /* splice out y */
-    x->parent = y->parent ;
-    if( y->parent == nilS ){
-	/* y is the root - x becomes new root */
-	tree->root = x ;
-    } else if( y == y->parent->left ){
-	y->parent->left = x ;
-    } else {
-	y->parent->right = x ;
-    }
-    /* if the successor of z was spliced out copy content */
-    if( y != z ){
-	z->data = y->data ;
-    }
+	/* we must delete the user data first so to avoid copy problem later */
+	if (userDelete) {
+		(*userDelete)(z->data);
+	}
+	/* now begin deletion process */
+	/* determine which node to splice out */
+	if (z->left == nilS || z->right == nilS) {
+		y = z;
+	} else {
+		y = tree_suc(z);
+	}
+	/* let x be the non-nil child of y or nil if y has no children */
+	if (y->left != nilS) {
+		x = y->left;
+	} else {
+		x = y->right;
+	}
+	/* splice out y */
+	x->parent = y->parent;
+	if (y->parent == nilS) {
+		/* y is the root - x becomes new root */
+		tree->root = x;
+	} else if (y == y->parent->left) {
+		y->parent->left = x;
+	} else {
+		y->parent->right = x;
+	}
+	/* if the successor of z was spliced out copy content */
+	if (y != z) {
+		z->data = y->data;
+	}
 
-    /* now take care of the red black attributes */
-    if( y->color == BLACK ){
-	while( x != tree->root && x->color == BLACK ){
-	    if( x == x->parent->left ){
-		w = x->parent->right ;
-		if( w->color == RED ){
-		    w->color = BLACK ;
-		    x->parent->color = RED ;
-		    left_rotate( tree, x->parent ) ;
-		    w = x->parent->right ;
-		}
-		if( w->left->color == BLACK && w->right->color == BLACK ){
-		    w->color = RED ;
-		    x = x->parent ;
-		} else {
-		    if( w->right->color == BLACK ){
-			w->left->color = BLACK ;
-			w->color = RED ;
-			right_rotate( tree, w ) ;
-			w = x->parent->right ;
-		    }
-		    w->color = x->parent->color ;
-		    x->parent->color = BLACK ;
-		    w->right->color = BLACK ;
-		    left_rotate( tree, x->parent ) ;
-		    x = tree->root ;
-		}
-	    } else { /* right side case */
-		w = x->parent->left ;
-		if( w->color == RED ){
-		    w->color = BLACK ;
-		    x->parent->color = RED ;
-		    right_rotate( tree, x->parent ) ;
-		    w = x->parent->left ;
-		}
-		if( w->right->color == BLACK && w->left->color == BLACK ){
-		    w->color = RED ;
-		    x = x->parent ;
-		} else {
-		    if( w->left->color == BLACK ){
-			w->right->color = BLACK ;
-			w->color = RED ;
-			left_rotate( tree, w ) ;
-			w = x->parent->left ;
-		    }
-		    w->color = x->parent->color ;
-		    x->parent->color = BLACK ;
-		    w->left->color = BLACK ;
-		    right_rotate( tree, x->parent ) ;
-		    x = tree->root ;
-		}
-	    } /* end right side case */
-	} /* end while loop */
-	x->color = BLACK ;
-    } /* end test on y's color */
+	/* now take care of the red black attributes */
+	if (y->color == BLACK) {
+		while (x != tree->root && x->color == BLACK) {
+			if (x == x->parent->left) {
+				w = x->parent->right;
+				if (w->color == RED) {
+					w->color = BLACK;
+					x->parent->color = RED;
+					left_rotate(tree, x->parent);
+					w = x->parent->right;
+				}
+				if (w->left->color == BLACK && w->right->color == BLACK) {
+					w->color = RED;
+					x = x->parent;
+				} else {
+					if (w->right->color == BLACK) {
+						w->left->color = BLACK;
+						w->color = RED;
+						right_rotate(tree, w);
+						w = x->parent->right;
+					}
+					w->color = x->parent->color;
+					x->parent->color = BLACK;
+					w->right->color = BLACK;
+					left_rotate(tree, x->parent);
+					x = tree->root;
+				}
+			} else {
+				/* right side case */
+				w = x->parent->left;
+				if (w->color == RED) {
+					w->color = BLACK;
+					x->parent->color = RED;
+					right_rotate(tree, x->parent);
+					w = x->parent->left;
+				}
+				if (w->right->color == BLACK && w->left->color == BLACK) {
+					w->color = RED;
+					x = x->parent;
+				} else {
+					if (w->left->color == BLACK) {
+						w->right->color = BLACK;
+						w->color = RED;
+						left_rotate(tree, w);
+						w = x->parent->left;
+					}
+					w->color = x->parent->color;
+					x->parent->color = BLACK;
+					w->left->color = BLACK;
+					right_rotate(tree, x->parent);
+					x = tree->root;
+				}
+			} /* end right side case */
+		} /* end while loop */
+		x->color = BLACK;
+	} /* end test on y's color */
 
-    /* now safe to free y */
-    YFREE(y);
+	/* now safe to free y */
+	YFREE(y);
 
-    tree->size --;
-
+	tree->size--;
 } /* end tree_delete */
 
 
-VOID Yrbtree_insert( tree, data )
+void Yrbtree_insert(tree, data)
 YTREEPTR tree ;
-VOIDPTR data ;
-{
-    BINTREEPTR x ;          /* a temporary pointer */
-    BINTREEPTR y ;          /* a temporary pointer */
-    BINTREEPTR z ;          /* a temporary pointer */
-    BINTREEPTR nil ;          /* a temporary pointer */
-    BINTREEPTR ptr ;          /* a temporary pointer */
-    INT (*comp_func)() ;      /* current compare function */
+VOIDPTR data ; {
+	BINTREEPTR x; /* a temporary pointer */
+	BINTREEPTR y; /* a temporary pointer */
+	BINTREEPTR z; /* a temporary pointer */
+	BINTREEPTR nil; /* a temporary pointer */
+	BINTREEPTR ptr; /* a temporary pointer */
+	INT (*comp_func)(); /* current compare function */
 
-    if(!(data)){
-	M( ERRMSG, "Yrbtree_insert","No data given\n" ) ;
-	return ;
-    }
-
-    /* first perform an normal insertion into the binary tree */
-    comp_func = tree->compare_func ;
-    y = nilS ;
-    x = YMALLOC( 1, BINTREE ) ;
-    x->data = data ;
-    x->left = nilS ;
-    x->right = nilS ;
-    /* find the place where we want to deposit the data */
-    for( ptr = tree->root; ptr != nilS ; ){
-	y = ptr ;  /* save the place for the insert */
-	if( comp_f( data, ptr->data ) < 0 ){
-	    ptr = ptr->left ;
-	} else {
-	    ptr = ptr->right ;
+	if (!(data)) {
+		M(ERRMSG, "Yrbtree_insert", "No data given\n");
+		return;
 	}
-    }
-    /* now set the parent field of x */
-    x->parent = y ;
-    if( y == nilS ){
-	tree->root = x ;
-    } else if( comp_f( data, y->data ) < 0 ){
-	y->left = x ;
-    } else {
-	y->right = x ;
-    }
 
-    /* now fix up the tree so it is a red black tree */
-    x->color = RED ;
-    while( x != tree->root && x->parent->color == RED ){
-	if( x->parent == x->parent->parent->left ){
-	    y = x->parent->parent->right ;
-	    if( y->color == RED ){
-		x->parent->color = BLACK ;
-		y->color = BLACK ;
-		x->parent->parent->color = RED ;
-		x = x->parent->parent ;
-	    } else {
-		if( x == x->parent->right ){
-		    x = x->parent ;
-		    left_rotate( tree, x ) ;
+	/* first perform an normal insertion into the binary tree */
+	comp_func = tree->compare_func;
+	y = nilS;
+	x = YMALLOC(1, BINTREE);
+	x->data = data;
+	x->left = nilS;
+	x->right = nilS;
+	/* find the place where we want to deposit the data */
+	for (ptr = tree->root; ptr != nilS;) {
+		y = ptr; /* save the place for the insert */
+		if (comp_f(data, ptr->data) < 0) {
+			ptr = ptr->left;
+		} else {
+			ptr = ptr->right;
 		}
-		x->parent->color = BLACK ;
-		x->parent->parent->color = RED ;
-		right_rotate( tree, x->parent->parent ) ;
-	    }
-	} else {
-	    y = x->parent->parent->left ;
-	    if( y->color == RED ){
-		x->parent->color = BLACK ;
-		y->color = BLACK ;
-		x->parent->parent->color = RED ;
-		x = x->parent->parent ;
-	    } else {
-		if( x == x->parent->left ){
-		    x = x->parent ;
-		    right_rotate( tree, x ) ;
-		}
-		x->parent->color = BLACK ;
-		x->parent->parent->color = RED ;
-		left_rotate( tree, x->parent->parent ) ;
-	    }
 	}
-    }
-    tree->root->color = BLACK ;
-    tree->size ++;
+	/* now set the parent field of x */
+	x->parent = y;
+	if (y == nilS) {
+		tree->root = x;
+	} else if (comp_f(data, y->data) < 0) {
+		y->left = x;
+	} else {
+		y->right = x;
+	}
+
+	/* now fix up the tree so it is a red black tree */
+	x->color = RED;
+	while (x != tree->root && x->parent->color == RED) {
+		if (x->parent == x->parent->parent->left) {
+			y = x->parent->parent->right;
+			if (y->color == RED) {
+				x->parent->color = BLACK;
+				y->color = BLACK;
+				x->parent->parent->color = RED;
+				x = x->parent->parent;
+			} else {
+				if (x == x->parent->right) {
+					x = x->parent;
+					left_rotate(tree, x);
+				}
+				x->parent->color = BLACK;
+				x->parent->parent->color = RED;
+				right_rotate(tree, x->parent->parent);
+			}
+		} else {
+			y = x->parent->parent->left;
+			if (y->color == RED) {
+				x->parent->color = BLACK;
+				y->color = BLACK;
+				x->parent->parent->color = RED;
+				x = x->parent->parent;
+			} else {
+				if (x == x->parent->left) {
+					x = x->parent;
+					right_rotate(tree, x);
+				}
+				x->parent->color = BLACK;
+				x->parent->parent->color = RED;
+				left_rotate(tree, x->parent->parent);
+			}
+		}
+	}
+	tree->root->color = BLACK;
+	tree->size++;
 } /* Yrbtree_insert */
 
 /* enumerate all the data.  First time call with startFlag=TRUE */
 /* next times call with startFlag=FALSE. */
-VOIDPTR Yrbtree_enumerate( tree, startFlag )
+VOIDPTR Yrbtree_enumerate(tree, startFlag)
 YTREEPTR tree ;
-BOOL startFlag;
-{
-  BINTREEPTR ptr ;          /* remember where we are */
-  
-  if( startFlag ){
-    for( ptr = tree->root; ptr != nilS && ptr->left != nilS;
-	ptr = ptr->left ) ;
-  } else {
-    /* find successor to current ptr */
-    ptr = tree->enumeratePtr;         /* get old current position */
-    /* find successor to current ptr */
-    if( ptr == recalcS ){
-      /* calculate from the beginning */
-      return( Yrbtree_enumerate( tree, TRUE )) ;
-    } else {
-      ptr = tree_suc( ptr ) ;
-    }
-  }
-  tree->enumeratePtr = ptr;         /* save new current position */
-  if( ptr != nilS ){
-    return( ptr->data ) ;
-  }
-  return( NIL(VOIDPTR) ) ;
+BOOL startFlag; {
+	BINTREEPTR ptr; /* remember where we are */
+
+	if (startFlag) {
+		for (ptr = tree->root; ptr != nilS && ptr->left != nilS;
+		     ptr = ptr->left);
+	} else {
+		/* find successor to current ptr */
+		ptr = tree->enumeratePtr; /* get old current position */
+		/* find successor to current ptr */
+		if (ptr == recalcS) {
+			/* calculate from the beginning */
+			return (Yrbtree_enumerate(tree, TRUE));
+		} else {
+			ptr = tree_suc(ptr);
+		}
+	}
+	tree->enumeratePtr = ptr; /* save new current position */
+	if (ptr != nilS) {
+		return (ptr->data);
+	}
+	return (NIL(VOIDPTR));
 } /* end Yrbtree_enumerate */
 
 /* inverse of enumerate.  Start at max of tree and work backwords */
 /* next times call with startFlag=FALSE. */
-VOIDPTR Yrbtree_revlist( tree, startFlag )
+VOIDPTR Yrbtree_revlist(tree, startFlag)
 YTREEPTR tree ;
-BOOL startFlag;
-{
-  BINTREEPTR ptr ;          /* remember where we are */
-  
-  if( startFlag ){
-    /* find the maximum in the tree */
-    for( ptr = tree->root;ptr != nilS && ptr->right != nilS;
-	ptr = ptr->right ) ;
-  } else {
-    ptr = tree->enumeratePtr;         /* get old current position */
-    /* find successor to current ptr */
-    if( ptr == recalcS ){
-      /* calculate from the beginning */
-      return( Yrbtree_revlist( tree, TRUE )) ;
-    } else {
-      ptr = tree_pred( ptr ) ;
-    }
-  }
-  tree->enumeratePtr = ptr;         /* save new current position */
-  if( ptr != nilS ){
-    return( ptr->data ) ;
-  }
-  return( NIL(VOIDPTR) ) ;
+BOOL startFlag; {
+	BINTREEPTR ptr; /* remember where we are */
+
+	if (startFlag) {
+		/* find the maximum in the tree */
+		for (ptr = tree->root; ptr != nilS && ptr->right != nilS;
+		     ptr = ptr->right);
+	} else {
+		ptr = tree->enumeratePtr; /* get old current position */
+		/* find successor to current ptr */
+		if (ptr == recalcS) {
+			/* calculate from the beginning */
+			return (Yrbtree_revlist(tree, TRUE));
+		} else {
+			ptr = tree_pred(ptr);
+		}
+	}
+	tree->enumeratePtr = ptr; /* save new current position */
+	if (ptr != nilS) {
+		return (ptr->data);
+	}
+	return (NIL(VOIDPTR));
 } /* end Yrbtree_revlist */
 
 /* Push the current enumeration pointer.  This is useful */
 /* for recursive enumeration                             */
-VOID Yrbtree_enumeratePush ( tree )
-YTREEPTR tree;
-{
-   if (!(tree->enumerateDeck)) {
-     tree->enumerateDeck = Ydeck_init();
-   }
+VOID Yrbtree_enumeratePush(tree)
+YTREEPTR tree; {
+	if (!(tree->enumerateDeck)) {
+		tree->enumerateDeck = Ydeck_init();
+	}
 
-   Ydeck_push( tree->enumerateDeck,tree->enumeratePtr);
-} 
+	Ydeck_push(tree->enumerateDeck, tree->enumeratePtr);
+}
 
 /* pops the current enumeration pointer.  This is useful */
 /* for recursive enumeration                             */
-VOID Yrbtree_enumeratePop ( tree )
-YTREEPTR tree;
-{
-   if (!(tree->enumerateDeck)) {
-     M(ERRMSG,"Yrbtree_enumeratePop","There has been no push\n");
-   }
-   
-   if ( Ydeck_size(tree->enumerateDeck) <= 0 ) {
-     M(ERRMSG,"Yrbtree_enumeratePop","Imbalance of push/pop\n");
-   }
- 
-    tree->enumeratePtr = (BINTREEPTR) Ydeck_pop(tree->enumerateDeck);
+VOID Yrbtree_enumeratePop(tree)
+YTREEPTR tree; {
+	if (!(tree->enumerateDeck)) {
+		M(ERRMSG, "Yrbtree_enumeratePop", "There has been no push\n");
+	}
+
+	if (Ydeck_size(tree->enumerateDeck) <= 0) {
+		M(ERRMSG, "Yrbtree_enumeratePop", "Imbalance of push/pop\n");
+	}
+
+	tree->enumeratePtr = (BINTREEPTR) Ydeck_pop(tree->enumerateDeck);
 } /* end Yrbtree_enumeratePop() */
 
 /* delete a node in the tree by using the key */
-BOOL Yrbtree_delete( tree, key, userDelete )
+BOOL Yrbtree_delete(tree, key, userDelete)
 YTREEPTR tree ;
 VOIDPTR key ;
-VOID (*userDelete)();
-{
-    BINTREEPTR z ;            /* a temporary pointer */
+VOID (*userDelete)(); {
+	BINTREEPTR z; /* a temporary pointer */
 
-    z = tree_search( tree, key ) ;
-    if( z == nilS ){
-	/* didn't find data in the tree */
-	return( FALSE ) ;
-    }
-    tree_delete( tree, z, userDelete ) ;
-    return( TRUE ) ;
-
+	z = tree_search(tree, key);
+	if (z == nilS) {
+		/* didn't find data in the tree */
+		return (FALSE);
+	}
+	tree_delete(tree, z, userDelete);
+	return (TRUE);
 } /* end Yrbtree_delete() */
 
-BOOL Yrbtree_deleteCurrentInterval( tree, userDelete )
+BOOL Yrbtree_deleteCurrentInterval(tree, userDelete)
 YTREEPTR tree ;
-VOID (*userDelete)();
-{
-    BINTREEPTR z ;            /* a temporary pointer */
-    BINTREEPTR w ;            /* a temporary pointer */
+VOID (*userDelete)(); {
+	BINTREEPTR z; /* a temporary pointer */
+	BINTREEPTR w; /* a temporary pointer */
 
-    if( (z = tree->intervalPtr) && z != nilS ){
-	/* -----------------------------------------------------------------
-	*  Perform operations to insure that interval enumerate works 
-	*  after delete.  Lucky since predecessor does not get mangled
-	*  in a tree delete operation.
-	----------------------------------------------------------------- */
-	w = tree_pred( z ) ;
-	if( w != nilS ){
-	    tree->intervalPtr = w ; /* ok to use predecessor */
+	if ((z = tree->intervalPtr) && z != nilS) {
+		/* -----------------------------------------------------------------
+		*  Perform operations to insure that interval enumerate works
+		*  after delete.  Lucky since predecessor does not get mangled
+		*  in a tree delete operation.
+		----------------------------------------------------------------- */
+		w = tree_pred(z);
+		if (w != nilS) {
+			tree->intervalPtr = w; /* ok to use predecessor */
+		} else {
+			/* this is the case where we delete min in tree */
+			/* need to recalculate */
+			tree->intervalPtr = recalcS;
+		}
+		/* -----------------------------------------------------------------
+		*  Now we can delete the rbtree pointer.
+		----------------------------------------------------------------- */
+		tree_delete(tree, z, userDelete);
+		return (TRUE);
 	} else {
-	    /* this is the case where we delete min in tree */
-	    /* need to recalculate */
-	    tree->intervalPtr = recalcS ;
+		return (FALSE);
 	}
-	/* -----------------------------------------------------------------
-	*  Now we can delete the rbtree pointer.
-	----------------------------------------------------------------- */
-	tree_delete( tree, z, userDelete ) ;
-	return( TRUE ) ;
-    } else {
-	return( FALSE ) ;
-    }
 } /* end Yrbtree_deleteCurrentInterval() */
 
-BOOL Yrbtree_deleteCurrentEnumerate( tree, userDelete )
+BOOL Yrbtree_deleteCurrentEnumerate(tree, userDelete)
 YTREEPTR tree ;
-VOID (*userDelete)();
-{
-    BINTREEPTR z ;            /* a temporary pointer */
-    BINTREEPTR w ;            /* a temporary pointer */
+VOID (*userDelete)(); {
+	BINTREEPTR z; /* a temporary pointer */
+	BINTREEPTR w; /* a temporary pointer */
 
-    if( (z = tree->enumeratePtr) && z != nilS ){
-	/* -----------------------------------------------------------------
-	*  Perform operations to insure that interval enumerate works 
-	*  after delete.  Lucky since predecessor does not get mangled
-	*  in a tree delete operation.
-	----------------------------------------------------------------- */
-	w = tree_pred( z ) ;
-	if( w != nilS ){
-	    tree->enumeratePtr = w ; /* ok to use predecessor */
+	if ((z = tree->enumeratePtr) && z != nilS) {
+		/* -----------------------------------------------------------------
+		*  Perform operations to insure that interval enumerate works
+		*  after delete.  Lucky since predecessor does not get mangled
+		*  in a tree delete operation.
+		----------------------------------------------------------------- */
+		w = tree_pred(z);
+		if (w != nilS) {
+			tree->enumeratePtr = w; /* ok to use predecessor */
+		} else {
+			/* this is the case where we delete min in tree */
+			/* need to recalculate */
+			tree->enumeratePtr = recalcS;
+		}
+		/* -----------------------------------------------------------------
+		*  Now we can delete the rbtree pointer.
+		----------------------------------------------------------------- */
+		tree_delete(tree, z, userDelete);
+		return (TRUE);
 	} else {
-	    /* this is the case where we delete min in tree */
-	    /* need to recalculate */
-	    tree->enumeratePtr = recalcS ;
+		return (FALSE);
 	}
-	/* -----------------------------------------------------------------
-	*  Now we can delete the rbtree pointer.
-	----------------------------------------------------------------- */
-	tree_delete( tree, z, userDelete ) ;
-	return( TRUE ) ;
-    } else {
-	return( FALSE ) ;
-    }
 } /* end Yrbtree_deleteCurrentEnumerate() */
 
-static void tree_dump( tree, ptr, print_key, printTab )
+static void tree_dump(tree, ptr, print_key, printTab)
 YTREEPTR tree ;
 BINTREEPTR ptr ;
 VOID (*print_key)() ;
-INT printTab ;
-{
-    INT  i ;
+INT printTab ; {
+	INT i;
 
-    if( ptr != nilS ){
-	printTab+=4;
+	if (ptr != nilS) {
+		printTab += 4;
 
-	tree_dump( tree, ptr->right, print_key, printTab ) ;
+		tree_dump(tree, ptr->right, print_key, printTab);
 
-	/* print level */
-	fprintf( stderr, " " ) ;
-	for( i = 1; i < printTab; i++ ){
-	    fprintf( stderr, " " ) ;
+		/* print level */
+		fprintf(stderr, " ");
+		for (i = 1; i < printTab; i++) {
+			fprintf(stderr, " ");
+		}
+		(*print_key)(ptr->data);
+		if (ptr->color == BLACK) {
+			fprintf(stderr, ":black\n");
+		} else {
+			fprintf(stderr, ":red\n");
+		}
+
+		tree_dump(tree, ptr->left, print_key, printTab);
 	}
-	(*print_key)( ptr->data ) ;
-	if( ptr->color == BLACK ){
-	    fprintf( stderr, ":black\n" ) ;
-	} else {
-	    fprintf( stderr, ":red\n" ) ;
-	}
-
-	tree_dump( tree, ptr->left, print_key, printTab ) ;
-
-    }
 } /* end Ytree_dump */
 
-VOID Yrbtree_dump( tree, print_key )
+VOID Yrbtree_dump(tree, print_key)
 YTREEPTR tree ;
-VOID (*print_key)() ;
-{
-    if( tree ){
-        Yrbtree_verify(tree);
-	tree_dump( tree, tree->root, print_key, 1 ) ;
-    }
+VOID (*print_key)() ; {
+	if (tree) {
+		Yrbtree_verify(tree);
+		tree_dump(tree, tree->root, print_key, 1);
+	}
 } /* end Ytree_dump */
 
 
-VOIDPTR Yrbtree_interval( tree, low_key, high_key, startFlag )
+VOIDPTR Yrbtree_interval(tree, low_key, high_key, startFlag)
 YTREEPTR tree ;
 VOIDPTR low_key, high_key ;
-BOOL startFlag;
-{
-    BINTREEPTR ptr ;                  /* remember where we are */
-    static INT (*comp_func)() ;       /* current compare function */
-    BINTREEPTR y ;                    /* remember where we are */
+BOOL startFlag; {
+	BINTREEPTR ptr; /* remember where we are */
+	static INT (*comp_func)(); /* current compare function */
+	BINTREEPTR y; /* remember where we are */
 
-    comp_func = tree->compare_func ;
-    if( startFlag ){
-
-	/* find where we would put low_key if we were to put */
-	/* it in the tree */
-	y = nilS ;
-	for( ptr = tree->root; ptr != nilS; ){
-	    y = ptr ;  /* save the place for the proposed insert */
-	    if( comp_f( low_key, ptr->data ) <= 0 ){
-		ptr = ptr->left ;
-	    } else {
-		ptr = ptr->right ;
-	    }
-	}
-	/* now see if we need to find successor */
-	if( y != nilS ){
-	    ptr = y ;
-	    if( comp_f( low_key, ptr->data ) > 0 ){
+	comp_func = tree->compare_func;
+	if (startFlag) {
+		/* find where we would put low_key if we were to put */
+		/* it in the tree */
+		y = nilS;
+		for (ptr = tree->root; ptr != nilS;) {
+			y = ptr; /* save the place for the proposed insert */
+			if (comp_f(low_key, ptr->data) <= 0) {
+				ptr = ptr->left;
+			} else {
+				ptr = ptr->right;
+			}
+		}
+		/* now see if we need to find successor */
+		if (y != nilS) {
+			ptr = y;
+			if (comp_f(low_key, ptr->data) > 0) {
+				/* find successor to current ptr */
+				ptr = tree_suc(ptr);
+			}
+		}
+	} else {
 		/* find successor to current ptr */
-		ptr = tree_suc( ptr ) ;
-	    }
+		ptr = tree->intervalPtr; /* get old current pointer */
+		if (ptr == recalcS) {
+			/* calculate from the beginning */
+			return (Yrbtree_interval(tree, low_key, high_key, TRUE));
+		} else {
+			ptr = tree_suc(ptr);
+		}
 	}
-
-    } else {
-      /* find successor to current ptr */
-      ptr = tree->intervalPtr;        /* get old current pointer */
-      if( ptr == recalcS ){
-	/* calculate from the beginning */
-	return( Yrbtree_interval( tree, low_key, high_key, TRUE )) ;
-      } else {
-	ptr = tree_suc( ptr ) ;
-      }
-    }
-    /* is pointer in interval? */
-    if( ptr != nilS &&
-       comp_f( ptr->data, high_key ) > 0 ){
-      ptr = nilS ;
-    }
-    tree->intervalPtr = ptr;         /* save new current position */
-    if( ptr != nilS ){
-	return( ptr->data ) ;
-    }
-    return( NIL(VOIDPTR) ) ;
+	/* is pointer in interval? */
+	if (ptr != nilS &&
+	    comp_f(ptr->data, high_key) > 0) {
+		ptr = nilS;
+	}
+	tree->intervalPtr = ptr; /* save new current position */
+	if (ptr != nilS) {
+		return (ptr->data);
+	}
+	return (NIL(VOIDPTR));
 } /* end Ytree_interval */
 
 
-INT Yrbtree_interval_size( tree, low_key, high_key )
+INT Yrbtree_interval_size(tree, low_key, high_key)
 YTREEPTR tree ;
-VOIDPTR low_key, high_key ;
-{
-    static INT (*comp_func)() ;       /* current compare function */
-    INT size ;			      /* number of element in interval */
-    BINTREEPTR ptr ;                  /* remember where we are */
-    BINTREEPTR y ;                    /* remember where we are */
+VOIDPTR low_key, high_key ; {
+	static INT (*comp_func)(); /* current compare function */
+	INT size; /* number of element in interval */
+	BINTREEPTR ptr; /* remember where we are */
+	BINTREEPTR y; /* remember where we are */
 
-    comp_func = tree->compare_func ;
-    size = 0 ;
-    /* -----------------------------------------------------------------
-    *  Find where we would put low_key if we were to put it in the tree.
-    ----------------------------------------------------------------- */
-    for( y = nilS, ptr = tree->root; ptr != nilS; ){
-	y = ptr ;  /* save the place for the proposed insert */
-	if( comp_f( low_key, ptr->data ) <= 0 ){
-	    ptr = ptr->left ;
-	} else {
-	    ptr = ptr->right ;
+	comp_func = tree->compare_func;
+	size = 0;
+	/* -----------------------------------------------------------------
+	*  Find where we would put low_key if we were to put it in the tree.
+	----------------------------------------------------------------- */
+	for (y = nilS, ptr = tree->root; ptr != nilS;) {
+		y = ptr; /* save the place for the proposed insert */
+		if (comp_f(low_key, ptr->data) <= 0) {
+			ptr = ptr->left;
+		} else {
+			ptr = ptr->right;
+		}
 	}
-    }
-    /* now see if we need to find successor */
-    if( y != nilS ){
-	ptr = y ;
-	if( comp_f( low_key, ptr->data ) > 0 ){
-	    /* find successor to current ptr */
-	    ptr = tree_suc( ptr ) ;
+	/* now see if we need to find successor */
+	if (y != nilS) {
+		ptr = y;
+		if (comp_f(low_key, ptr->data) > 0) {
+			/* find successor to current ptr */
+			ptr = tree_suc(ptr);
+		}
 	}
-    }
-    /* is pointer in interval? */
-    if( ptr != nilS && comp_f( ptr->data, high_key ) > 0 ){
-	ptr = nilS ;
-    }
-    while( ptr && ptr != nilS ){
-	size++ ;
-	ptr = tree_suc( ptr ) ;
 	/* is pointer in interval? */
-	if( ptr != nilS && comp_f( ptr->data, high_key ) > 0 ){
-	    ptr = nilS ;
+	if (ptr != nilS && comp_f(ptr->data, high_key) > 0) {
+		ptr = nilS;
 	}
-    }
-    return( size ) ;
+	while (ptr && ptr != nilS) {
+		size++;
+		ptr = tree_suc(ptr);
+		/* is pointer in interval? */
+		if (ptr != nilS && comp_f(ptr->data, high_key) > 0) {
+			ptr = nilS;
+		}
+	}
+	return (size);
 } /* end Ytree_interval_size() */
 
 
 /* Push the current interval pointer.  This is useful  */
 /* for recursive intervals                             */
-VOID Yrbtree_intervalPush ( tree )
-YTREEPTR tree;
-{
-   if (!(tree->intervalDeck)) {
-     tree->intervalDeck = Ydeck_init();
-   }
+VOID Yrbtree_intervalPush(tree)
+YTREEPTR tree; {
+	if (!(tree->intervalDeck)) {
+		tree->intervalDeck = Ydeck_init();
+	}
 
-   Ydeck_push(tree->intervalDeck,tree->intervalPtr);
-} 
+	Ydeck_push(tree->intervalDeck, tree->intervalPtr);
+}
 
 /* Pop the current interval pointer.  This is useful  */
 /* for recursive intervals                             */
-VOID Yrbtree_intervalPop ( tree )
-YTREEPTR tree;
-{
-   if (!(tree->intervalDeck)) {
-     M(ERRMSG,"Yrbtree_intervalPop","There has been no push\n");
-   }
-   
-   if ( Ydeck_size(tree->intervalDeck) <= 0 ) {
-     M(ERRMSG,"Yrbtree_intervalPop","Imbalance of push/pop\n");
-   }
- 
-    tree->intervalPtr = (BINTREEPTR) Ydeck_pop(tree->intervalDeck);
+VOID Yrbtree_intervalPop(tree)
+YTREEPTR tree; {
+	if (!(tree->intervalDeck)) {
+		M(ERRMSG, "Yrbtree_intervalPop", "There has been no push\n");
+	}
+
+	if (Ydeck_size(tree->intervalDeck) <= 0) {
+		M(ERRMSG, "Yrbtree_intervalPop", "Imbalance of push/pop\n");
+	}
+
+	tree->intervalPtr = (BINTREEPTR) Ydeck_pop(tree->intervalDeck);
 } /* end Yrbtree_intervalPop() */
 
-VOID Yrbtree_interval_free( tree, low_key, high_key, userDelete )
+VOID Yrbtree_interval_free(tree, low_key, high_key, userDelete)
 YTREEPTR tree ;
 VOIDPTR low_key, high_key ;
-VOID (*userDelete)();
-{
+VOID (*userDelete)(); {
+	VOIDPTR data;
 
-  VOIDPTR data ;
-
-  for (data = Yrbtree_interval( tree, low_key, high_key, TRUE); data;
-       data = Yrbtree_interval( tree, low_key, high_key, FALSE) ) {
-    Yrbtree_deleteCurrentInterval( tree, userDelete ) ;
-  }
-
+	for (data = Yrbtree_interval(tree, low_key, high_key, TRUE); data;
+	     data = Yrbtree_interval(tree, low_key, high_key, FALSE)) {
+		Yrbtree_deleteCurrentInterval(tree, userDelete);
+	}
 } /* end Yrbtree_interval_free() */
 
-static void tree_free( ptr )
-BINTREEPTR ptr ;
-{
-
-    if( ptr->left != nilS ){
-	tree_free( ptr->left ) ;
-    } 
-    if( ptr->right != nilS ){
-	tree_free( ptr->right ) ;
-    } 
-    if( ptr != nilS ){
-	YFREE( ptr ) ;
-    }
+static void tree_free(ptr)
+BINTREEPTR ptr ; {
+	if (ptr->left != nilS) {
+		tree_free(ptr->left);
+	}
+	if (ptr->right != nilS) {
+		tree_free(ptr->right);
+	}
+	if (ptr != nilS) {
+		YFREE(ptr);
+	}
 } /* end tree_free */
 
-static void free_tree_and_data( ptr, userDelete )
+static void free_tree_and_data(ptr, userDelete)
 BINTREEPTR ptr ;
-VOID (*userDelete)();
-{
-
-    if( ptr->left != nilS ){
-	free_tree_and_data( ptr->left,userDelete ) ;
-    } 
-    if( ptr->right != nilS ){
-	free_tree_and_data( ptr->right,userDelete ) ;
-    } 
-    if( ptr != nilS ){
-        (*userDelete)( ptr->data );  /* free tree nodes and data */
-	YFREE( ptr ) ;
-    }
+VOID (*userDelete)(); {
+	if (ptr->left != nilS) {
+		free_tree_and_data(ptr->left, userDelete);
+	}
+	if (ptr->right != nilS) {
+		free_tree_and_data(ptr->right, userDelete);
+	}
+	if (ptr != nilS) {
+		(*userDelete)(ptr->data); /* free tree nodes and data */
+		YFREE(ptr);
+	}
 } /* end tree_free */
 
-VOID Yrbtree_free( tree, userDelete )
+VOID Yrbtree_free(tree, userDelete)
 YTREEPTR tree ;
-VOID (*userDelete)();
-{
-    if( tree ){
-	Yrbtree_empty( tree,userDelete ) ;
-	YFREE( tree );                           
-    }
+VOID (*userDelete)(); {
+	if (tree) {
+		Yrbtree_empty(tree, userDelete);
+		YFREE(tree);
+	}
 } /* end Yrbtree_free */
 
-VOID Yrbtree_empty( tree, userDelete )
+VOID Yrbtree_empty(tree, userDelete)
 YTREEPTR tree ;
-VOID (*userDelete)();
-{
-  if( tree ){
-    if (tree->root != nilS) {             /* does tree need to be emptied? */
-      if (userDelete) {
-	free_tree_and_data(tree->root,userDelete);   /* free tree and data */
-      } else {
-	tree_free(tree->root);            /* free tree nodes only */
-      }
-      tree->root = nilS ;                 /* tree is now empty */
-    }                       /* end if tree->root */
-  }                         /* end if tree       */
-  tree->size = 0;
-  /* free decks associated with tree if they exist */
-  if( tree->enumerateDeck ){
-    Ydeck_free( tree->enumerateDeck, NULL ) ;
-    tree->enumerateDeck = NIL(YDECKPTR) ; 
-  }
-  if( tree->intervalDeck ){
-    Ydeck_free( tree->intervalDeck, NULL ) ;
-    tree->intervalDeck = NIL(YDECKPTR) ; 
-  }
+VOID (*userDelete)(); {
+	if (tree) {
+		if (tree->root != nilS) {
+			/* does tree need to be emptied? */
+			if (userDelete) {
+				free_tree_and_data(tree->root, userDelete); /* free tree and data */
+			} else {
+				tree_free(tree->root); /* free tree nodes only */
+			}
+			tree->root = nilS; /* tree is now empty */
+		} /* end if tree->root */
+	} /* end if tree       */
+	tree->size = 0;
+	/* free decks associated with tree if they exist */
+	if (tree->enumerateDeck) {
+		Ydeck_free(tree->enumerateDeck, NULL);
+		tree->enumerateDeck = NIL(YDECKPTR);
+	}
+	if (tree->intervalDeck) {
+		Ydeck_free(tree->intervalDeck, NULL);
+		tree->intervalDeck = NIL(YDECKPTR);
+	}
 } /* end Yrbtree_empty() */
 
 
-INT Yrbtree_size( tree )
-YTREEPTR tree ;
-{
-    INT size;
+INT Yrbtree_size(tree)
+YTREEPTR tree ; {
+	INT size;
 
-    if( tree ){
-      if ( tree->size >= 0 ) {
-	return( tree->size ) ;
-      }
-      M(ERRMSG,"Yrbtree_size","Bogus rbTree size\n");
-    } else {
-      M(ERRMSG,"Yrbtree_size","NULL rbTree pointer\n");
-    }
-    return (-1);
+	if (tree) {
+		if (tree->size >= 0) {
+			return (tree->size);
+		}
+		M(ERRMSG, "Yrbtree_size", "Bogus rbTree size\n");
+	} else {
+		M(ERRMSG, "Yrbtree_size", "NULL rbTree pointer\n");
+	}
+	return (-1);
 } /* end Yrbtree_size */
 
-INT (*Yrbtree_get_compare( tree ))()
-YTREEPTR tree;
-{
-  return ( tree->compare_func );
+INT (*Yrbtree_get_compare(tree))()
+YTREEPTR tree; {
+	return (tree->compare_func);
 }
 
 INT Yrbtree_verify(tree)
-     YTREEPTR tree ;
-{
-  INT count;
-  INT rc;
-  BINTREEPTR ptr;
+YTREEPTR tree ; {
+	INT count;
+	INT rc;
+	BINTREEPTR ptr;
 
-  /* exercise tree pointers */
-  
-  rc = TRUE;
-  count = 0;
- 
-  if ( YcheckDebug(tree) < sizeof(YTREEBOX) ) {
-      M(ERRMSG,"Yrbtree_verify","tree memory is corrupt\n");
-      rc = FALSE;
-  }
+	/* exercise tree pointers */
 
-  /* get first item in tree */
-  for( ptr = tree->root; ptr != nilS && ptr->left != nilS; ptr = ptr->left ) ;
-  /* walk tree */
-  for ( ; ptr != nilS; ptr = tree_suc( ptr ) ) {
-    if ( YcheckDebug(ptr) < sizeof(BINTREE) ) {
-      M(ERRMSG,"Yrbtree_verify","tree node memory is corrupt\n");
-      rc = FALSE;
-    }
-    count ++;
-  }
-  
-  /* if tree is corrupt, we may still get out of loop */
-  /* check the size field */
-  if ( count != Yrbtree_size(tree) ) {
-      M(ERRMSG,"Yrbtree_verify","Bogus rbTree. Data structure is corrupt\n");
-      rc = FALSE;
-  } 
+	rc = TRUE;
+	count = 0;
 
-  return ( rc );
+	if (YcheckDebug(tree) < sizeof(YTREEBOX)) {
+		M(ERRMSG, "Yrbtree_verify", "tree memory is corrupt\n");
+		rc = FALSE;
+	}
+
+	/* get first item in tree */
+	for (ptr = tree->root; ptr != nilS && ptr->left != nilS; ptr = ptr->left);
+	/* walk tree */
+	for (; ptr != nilS; ptr = tree_suc(ptr)) {
+		if (YcheckDebug(ptr) < sizeof(BINTREE)) {
+			M(ERRMSG, "Yrbtree_verify", "tree node memory is corrupt\n");
+			rc = FALSE;
+		}
+		count++;
+	}
+
+	/* if tree is corrupt, we may still get out of loop */
+	/* check the size field */
+	if (count != Yrbtree_size(tree)) {
+		M(ERRMSG, "Yrbtree_verify", "Bogus rbTree. Data structure is corrupt\n");
+		rc = FALSE;
+	}
+
+	return (rc);
 }
 
-VOID Yrbtree_resort( tree, compare_func )
+VOID Yrbtree_resort(tree, compare_func)
 YTREEPTR tree ;
-INT (*compare_func)() ;  /* user specifies key function */
+INT (*compare_func)() ; /* user specifies key function */
 {
-    BINTREEPTR ptr ;          /* remember where we are */
-    YTREEPTR new_tree ;       /* the new tree being built */
+	BINTREEPTR ptr; /* remember where we are */
+	YTREEPTR new_tree; /* the new tree being built */
 
-    new_tree = Yrbtree_init( compare_func ) ;
-  
-    /* first find the leftmost pointer */
-    for( ptr=tree->root;ptr!=nilS && ptr->left != nilS; ptr=ptr->left ) ;
+	new_tree = Yrbtree_init(compare_func);
 
-    /* now enumerate all the members of the tree in order */
-    for( ; ptr && ptr != nilS ; ptr = tree_suc( ptr ) ) {
-	if( ptr != nilS ){
-	    /* build new tree */
-	    Yrbtree_insert( new_tree, ptr->data ) ;
+	/* first find the leftmost pointer */
+	for (ptr = tree->root; ptr != nilS && ptr->left != nilS; ptr = ptr->left);
+
+	/* now enumerate all the members of the tree in order */
+	for (; ptr && ptr != nilS; ptr = tree_suc(ptr)) {
+		if (ptr != nilS) {
+			/* build new tree */
+			Yrbtree_insert(new_tree, ptr->data);
+		}
 	}
-    }
 
-    /* free the data in the old tree */
-    Yrbtree_empty( tree, NULL ) ;
+	/* free the data in the old tree */
+	Yrbtree_empty(tree, NULL);
 
-    /* now copy over tree data */
-    tree->root = new_tree->root ;
-    tree->size = new_tree->size ;
-    tree->intervalPtr = NIL(BINTREEPTR) ;
-    tree->enumeratePtr = NIL(BINTREEPTR) ;
-    tree->searchPtr = NIL(BINTREEPTR) ;
-    tree->compare_func = compare_func ;
-    /* now free new tree */
-    YFREE( new_tree ) ;
-
+	/* now copy over tree data */
+	tree->root = new_tree->root;
+	tree->size = new_tree->size;
+	tree->intervalPtr = NIL(BINTREEPTR);
+	tree->enumeratePtr = NIL(BINTREEPTR);
+	tree->searchPtr = NIL(BINTREEPTR);
+	tree->compare_func = compare_func;
+	/* now free new tree */
+	YFREE(new_tree);
 } /* end Yrbtree_resort */
 
-YTREEPTR Yrbtree_copy( tree, compare_func )
+YTREEPTR Yrbtree_copy(tree, compare_func)
 YTREEPTR tree ;
-INT (*compare_func)() ;  /* user specifies key function */
+INT (*compare_func)() ; /* user specifies key function */
 {
-    BINTREEPTR ptr ;          /* remember where we are */
-    YTREEPTR new_tree ;       /* the new tree being built */
+	BINTREEPTR ptr; /* remember where we are */
+	YTREEPTR new_tree; /* the new tree being built */
 
-    new_tree = Yrbtree_init( compare_func ) ;
-  
-    /* first find the leftmost pointer */
-    for( ptr=tree->root;ptr!=nilS && ptr->left != nilS; ptr=ptr->left ) ;
+	new_tree = Yrbtree_init(compare_func);
 
-    /* now enumerate all the members of the tree in order */
-    for( ; ptr && ptr != nilS ; ptr = tree_suc( ptr ) ) {
-	if( ptr != nilS ){
-	    /* build new tree */
-	    Yrbtree_insert( new_tree, ptr->data ) ;
+	/* first find the leftmost pointer */
+	for (ptr = tree->root; ptr != nilS && ptr->left != nilS; ptr = ptr->left);
+
+	/* now enumerate all the members of the tree in order */
+	for (; ptr && ptr != nilS; ptr = tree_suc(ptr)) {
+		if (ptr != nilS) {
+			/* build new tree */
+			Yrbtree_insert(new_tree, ptr->data);
+		}
 	}
-    }
-    return( new_tree ) ;
-
+	return (new_tree);
 } /* end Yrbtree_resort */
 
 

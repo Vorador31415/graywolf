@@ -84,18 +84,12 @@ char *YinitProgram(name,version,introTextFunction)
      char *version ;
      VOID (*introTextFunction)() ;
 {
-  char    *date ,
-  *getCompileDate() ;
+  char    *date ;
   
   Ytimer_start() ;   /* start the elapsed timer */
   sprintf(programName,"%s",name);
   sprintf(progVersion,"%s",version);
-  
-  if ( date = getCompileDate() ){
-    sprintf(progDate,"%s",date);
-  } else {
-    sprintf(progDate,"unknown") ;
-  }
+
   sprintf( YmsgG, "%s version:%s date:%s",
 	  programName,progVersion,progDate) ;
   

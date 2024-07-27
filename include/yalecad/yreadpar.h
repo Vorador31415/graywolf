@@ -35,7 +35,7 @@ REVISIONS:  Sat Jan 26 12:36:04 PST 1991 - added genrows GENR to
 typedef YTREEPTR YPARPTR ;
 typedef YTREEBOX YPARBOX ;
 
-extern VOID Yreadpar_init( P4(char *design_name, INT  program,
+extern void Yreadpar_init( P4(char *design_name, INT  program,
 				INT  filter, BOOL abortFlag ) ) ;
 /* ******************* READPAR ROUTINES ****************** */
 /* 
